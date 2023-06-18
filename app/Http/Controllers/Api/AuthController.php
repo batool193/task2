@@ -1,16 +1,17 @@
 <?php
 
 namespace App\Http\Controllers\Api;
-
+use App\Models\Role;
 use Illuminate\Http\Request;
-use App\Http\Controllers\API\BaseController as BaseController;
+use App\Http\Traits\GeneralTrait;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Validator;
+use function PHPUnit\Framework\isEmpty;
 
-class AuthController extends BaseController
+class AuthController
 {
+    use GeneralTrait;
     /**
      * Register api
      *
@@ -25,18 +26,27 @@ class AuthController extends BaseController
             ]);
 
         if($validator->fails()){
-            return $this->sendError('Validation Error.'
-                , $validator->errors());
+            return $this->errorResponse($validator->errors(),422);
         }
-
-        $input = $request->all();
-        $input['password'] = bcrypt($input['password']);
-        $user = User::create($input);
-       // $success['token'] =  $user->createToken('MyApp')->plainTextToken;
-        $success['name'] =  $user->name;
-
-        return $this->sendResponse($success
-            , 'User is registered successfully.');
+        try {
+            $roles = Role::whereIn('id', $request['roles_id'])->get();
+            if($roles->count()==0)
+            {
+                return $this->errorResponse('No roles with such ids',500);
+            }
+            $input = $request->all();
+            $input['password'] = bcrypt($input['password']);
+            $user = User::create($input);
+            $user->roles()->attach($roles);
+            $data['token'] = $user->createToken('MyApp')->plainTextToken;
+            $data['name'] = $user->name;
+            $data['user'] = $user;
+            return $this->successResponse($data
+                , 'User is registered successfully.');
+        }
+        catch (\Exception $ex){
+            return $this->errorResponse($ex->getMessage(),500);
+        }
     }
 
     /**
@@ -46,22 +56,29 @@ class AuthController extends BaseController
      */
     public function login(Request $request)
     {
-        $data = $request->validate([
+        $validator =Validator::make($request->all(),[
             'email' => 'required|string',
             'password' => 'required|string'
         ]);
-        $user = User::where('email', $data['email'])->first();
-
-        if (!$user || !Hash::check($data['password'], $user->password)) {
-            return $this->sendError( 'incorrect username or password');
+        if($validator->fails()){
+            return $this->errorResponse($validator->errors(),422);
         }
 
+try {
+    $user = User::where('email', $request['email'])->first();
 
-            $success['token'] = $user->createToken('apiToken')->plainTextToken;
-            $success['name'] =  $user->name;
-            return $this->sendResponse($success, 'User has logged in successfully.');
+    if (!$user || !Hash::check($request ['password'], $user->password)) {
+        return $this->errorResponse( 'incorrect username or password',400);
+    }
+    $data['token'] = $user->createToken('apiToken')->plainTextToken;
+    $data['name'] = $user->name;
+    return $this->successResponse($data, 'User has logged in successfully.');
 
-
+}
+        catch(\Exception $ex)
+        {
+            return $this>$this->errorResponse($ex->getMessage(),500);
+        }
 
     }
 
@@ -69,7 +86,7 @@ class AuthController extends BaseController
   {
       auth('sanctum')->user()->tokens()->delete();
 
-      return $this->sendResponse([],'User has logged out successfully.');
+      return $this->successResponse([],'User has logged out successfully.');
   }
 
 }

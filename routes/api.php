@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\products\ProductController;
 use App\Http\Controllers\TestController;
+use App\Http\Controllers\users\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -25,4 +27,28 @@ Route::post('/logout',[AuthController::class,'logout']);;
 Route::post('/login',[AuthController::class,'login'])->name('login');
 
 
-Route::get('/test',[TestController::class,'test'])->middleware(['auth:sanctum']);
+Route::group([
+
+  //'prefix' => 'products',
+  //  'middleware' => ['auth:sanctum','throttle:60,1']
+    'middleware' => ['auth:sanctum']
+],function (){
+    Route::match(['put', 'patch'], '/update-user/{id}',[UserController::class,'updateRoles']);
+    Route::group([
+        'middleware' => 'isadmin'
+    ],function(){
+        Route::post('/add-product',[ProductController::class,'store']);
+        Route::match(['put', 'patch'], '/update-product/{id}',[ProductController::class,'update']);
+        Route::delete( '/delete-product/{id}',[ProductController::class,'destroy']);
+        Route::get('/u',[UserController::class,'getUsersByRole']);
+    });
+
+    Route::get('/all-products',[ProductController::class,'index']);
+  //There is something wrong right here....i wish you discover it
+    Route::get('/product/{letter}',[ProductController::class,'filterProductsByCategory']);
+    Route::get('/product/{id}',[ProductController::class,'show']);
+    Route::get('/all-users',[UserController::class,'index']);
+
+});
+
+
