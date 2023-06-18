@@ -4,10 +4,10 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\products\ProductController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\users\UserController;
+use App\Http\Controllers\reviews\ReviewController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -48,7 +48,12 @@ Route::group([
     Route::get('/product/{letter}',[ProductController::class,'filterProductsByCategory']);
     Route::get('/product/{id}',[ProductController::class,'show']);
     Route::get('/all-users',[UserController::class,'index']);
-
+    
+    Route::get('/review', [ReviewController::class, 'index']);
+    Route::post('/review', [ReviewController::class, 'store']);
+    Route::get('/review/{id}',[ReviewController::class,'show']);
+    Route::delete('/review/{id}', [ReviewController::class, 'destroy']);
 });
+
 
 
